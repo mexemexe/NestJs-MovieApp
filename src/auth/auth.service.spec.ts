@@ -2,7 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+
+vi.mock('bcrypt', () => ({
+  compare: vi.fn(),
+  hash: vi.fn()
+}));
 
 describe('AuthService', () => {
   let authService: AuthService;
@@ -23,11 +28,15 @@ describe('AuthService', () => {
 
     authService = module.get<AuthService>(AuthService);
     jwtService = module.get<JwtService>(JwtService);
+    
+    // Reset mocks before each test
+    vi.mocked(bcrypt.compare).mockClear();
+    vi.mocked(bcrypt.hash).mockClear();
   });
 
   it('should login successfully with correct credentials', async () => {
-    const hashedPassword = await bcrypt.hash('password123', 10);
-    vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+    vi.mocked(bcrypt.hash).mockResolvedValue('hashedPassword' as never);
+    vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
 
     const result = await authService.login('test@example.com', 'password123');
 
@@ -40,7 +49,7 @@ describe('AuthService', () => {
   });
 
   it('should throw error for invalid credentials', async () => {
-    vi.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+    vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
 
     await expect(authService.login('test@example.com', 'wrongpassword'))
       .rejects.toThrow('Invalid credentials');
