@@ -9,37 +9,35 @@ vi.mock('bcrypt', () => ({
   hash: vi.fn()
 }));
 
-class MockJwtService {
-  sign = vi.fn().mockReturnValue('mock_token');
-}
-
 describe('AuthService', () => {
   let authService: AuthService;
-  let mockJwtService: MockJwtService;
+  let jwtService: JwtService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
-        { 
-          provide: JwtService, 
-          useClass: MockJwtService 
+        {
+          provide: JwtService,
+          useValue: {
+            sign: vi.fn().mockReturnValue('test_token')
+          }
         }
       ],
     }).compile();
 
     authService = module.get<AuthService>(AuthService);
-    mockJwtService = module.get(JwtService);
+    jwtService = module.get<JwtService>(JwtService);
 
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
-    vi.mocked(bcrypt.hash).mockResolvedValue('hashed' as never);
+    vi.mocked(bcrypt.hash).mockResolvedValue('hashed_password' as never);
   });
 
   it('should login successfully with correct credentials', async () => {
     const result = await authService.login('test@example.com', 'password123');
 
-    expect(result).toEqual({ access_token: 'mock_token' });
-    expect(mockJwtService.sign).toHaveBeenCalledOnce();
+    expect(result).toEqual({ access_token: 'test_token' });
+    expect(jwtService.sign).toHaveBeenCalledOnce();
   });
 
   it('should throw error for missing email or password', async () => {
