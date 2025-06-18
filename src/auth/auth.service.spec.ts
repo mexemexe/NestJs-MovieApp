@@ -10,7 +10,7 @@ vi.mock('bcrypt');
 
 describe('AuthService', () => {
   let authService: AuthService;
-  let jwtService: JwtService;
+  let jwtService: { sign: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     // Dynamically import bcrypt after mocking
@@ -22,7 +22,10 @@ describe('AuthService', () => {
         { 
           provide: JwtService, 
           useValue: {
-            sign: vi.fn().mockReturnValue('test_token')
+            sign: vi.fn((payload) => {
+              // Mock sign implementation
+              return 'test_token_' + payload.email;
+            })
           }
         }
       ],
@@ -43,7 +46,7 @@ describe('AuthService', () => {
   it('should login successfully with correct credentials', async () => {
     const result = await authService.login('test@example.com', 'password123');
 
-    expect(result).toEqual({ access_token: 'test_token' });
+    expect(result).toEqual({ access_token: 'test_token_test@example.com' });
     expect(jwtService.sign).toHaveBeenCalledOnce();
   });
 
