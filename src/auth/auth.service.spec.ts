@@ -4,6 +4,11 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
+vi.mock('bcrypt', () => ({
+  compare: vi.fn(),
+  hash: vi.fn()
+}));
+
 class MockJwtService {
   sign = vi.fn().mockReturnValue('mock_token');
 }
@@ -26,8 +31,8 @@ describe('AuthService', () => {
     authService = module.get<AuthService>(AuthService);
     mockJwtService = module.get(JwtService);
 
-    vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
-    vi.spyOn(bcrypt, 'hash').mockResolvedValue('hashed' as never);
+    vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+    vi.mocked(bcrypt.hash).mockResolvedValue('hashed' as never);
   });
 
   it('should login successfully with correct credentials', async () => {
@@ -42,7 +47,7 @@ describe('AuthService', () => {
   });
 
   it('should throw error for invalid credentials', async () => {
-    vi.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+    vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
 
     await expect(authService.login('test@example.com', 'wrongpassword'))
       .rejects.toThrow('Invalid credentials');
