@@ -4,7 +4,7 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(private jwtService: JwtService) {}
 
   async login(email: string, password: string) {
     // Mock user validation 
