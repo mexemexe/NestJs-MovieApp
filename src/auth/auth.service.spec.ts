@@ -4,18 +4,24 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-// Dynamically imported bcrypt
-let bcryptModule: typeof import('bcrypt');
-
-vi.mock('bcrypt');
-
 describe('AuthService', () => {
   let authService: AuthService;
   let jwtService: { sign: ReturnType<typeof vi.fn> };
+  let bcryptMock: { 
+    compare: ReturnType<typeof vi.fn>, 
+    hash: ReturnType<typeof vi.fn> 
+  };
 
   beforeEach(async () => {
-    // Dynamically import bcrypt after mocking
-    bcryptModule = await import('bcrypt');
+    // Create mock implementations
+    bcryptMock = {
+      compare: vi.fn(),
+      hash: vi.fn()
+    };
+
+    // Replace global bcrypt with mock
+    vi.spyOn(bcrypt, 'compare').mockImplementation(bcryptMock.compare);
+    vi.spyOn(bcrypt, 'hash').mockImplementation(bcryptMock.hash);
 
     const module = await Test.createTestingModule({
       providers: [
@@ -35,13 +41,9 @@ describe('AuthService', () => {
     authService = module.get(AuthService);
     jwtService = module.get(JwtService);
 
-    // Reset mocks
-    vi.mocked(bcryptModule.compare).mockReset();
-    vi.mocked(bcryptModule.hash).mockReset();
-
     // Default mock implementations
-    vi.mocked(bcryptModule.hash).mockResolvedValue('hashed_password');
-    vi.mocked(bcryptModule.compare).mockResolvedValue(true);
+    bcryptMock.hash.mockResolvedValue('hashed_password');
+    bcryptMock.compare.mockResolvedValue(true);
   });
 
   it('should login successfully with correct credentials', async () => {
@@ -56,7 +58,7 @@ describe('AuthService', () => {
   });
 
   it('should throw error for invalid credentials', async () => {
-    vi.mocked(bcryptModule.compare).mockResolvedValue(false);
+    bcryptMock.compare.mockResolvedValue(false);
 
     await expect(authService.login('test@example.com', 'wrongpassword'))
       .rejects.toThrow('Invalid credentials');
@@ -68,5 +70,9 @@ describe('AuthService', () => {
 
     expect(token).toBe('test_token_test@example.com');
     expect(jwtService.sign).toHaveBeenCalledWith(payload);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 });
