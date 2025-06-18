@@ -4,7 +4,7 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(private jwtService: JwtService) {}
 
   async login(email: string, password: string) {
     // Mock user validation 
@@ -28,12 +28,7 @@ export class AuthService {
     // Generate JWT token
     const payload = { sub: user.id, email: user.email };
     return {
-      access_token: this.signToken(payload)
+      access_token: this.jwtService.sign(payload)
     };
-  }
-
-  // Separate method for easier testing
-  signToken(payload: any) {
-    return this.jwtService.sign(payload);
   }
 }
