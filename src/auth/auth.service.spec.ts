@@ -11,7 +11,7 @@ vi.mock('bcrypt', () => ({
 
 describe('AuthService', () => {
   let authService: AuthService;
-  let jwtService: JwtService;
+  let mockJwtService: JwtService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -20,14 +20,14 @@ describe('AuthService', () => {
         {
           provide: JwtService,
           useValue: {
-            sign: vi.fn().mockReturnValue('mocked_jwt_token')
+            sign: vi.fn().mockReturnValue('test_token')
           }
         }
       ],
     }).compile();
 
     authService = module.get<AuthService>(AuthService);
-    jwtService = module.get<JwtService>(JwtService);
+    mockJwtService = module.get<JwtService>(JwtService);
     
     // Reset mocks before each test
     vi.mocked(bcrypt.compare).mockClear();
@@ -40,8 +40,8 @@ describe('AuthService', () => {
 
     const result = await authService.login('test@example.com', 'password123');
 
-    expect(result).toHaveProperty('access_token');
-    expect(jwtService.sign).toHaveBeenCalled();
+    expect(result).toHaveProperty('access_token', 'test_token');
+    expect(mockJwtService.sign).toHaveBeenCalled();
   });
 
   it('should throw error for missing email or password', async () => {
