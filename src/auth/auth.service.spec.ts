@@ -3,19 +3,19 @@ import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-// Mock bcrypt module
-const mockBcrypt = {
-  compare: vi.fn(),
-  hash: vi.fn()
-};
+// Dynamically imported bcrypt
+let bcrypt: typeof import('bcrypt');
 
-vi.mock('bcrypt', () => mockBcrypt);
+vi.mock('bcrypt');
 
 describe('AuthService', () => {
   let authService: AuthService;
   let jwtService: JwtService;
 
   beforeEach(async () => {
+    // Dynamically import bcrypt after mocking
+    bcrypt = await import('bcrypt');
+
     const module = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -32,12 +32,12 @@ describe('AuthService', () => {
     jwtService = module.get(JwtService);
 
     // Reset mocks
-    mockBcrypt.hash.mockClear();
-    mockBcrypt.compare.mockClear();
+    bcrypt.compare.mockReset();
+    bcrypt.hash.mockReset();
 
     // Default mock implementations
-    mockBcrypt.hash.mockResolvedValue('hashed_password');
-    mockBcrypt.compare.mockResolvedValue(true);
+    bcrypt.hash.mockResolvedValue('hashed_password');
+    bcrypt.compare.mockResolvedValue(true);
   });
 
   it('should login successfully with correct credentials', async () => {
@@ -52,7 +52,7 @@ describe('AuthService', () => {
   });
 
   it('should throw error for invalid credentials', async () => {
-    mockBcrypt.compare.mockResolvedValue(false);
+    bcrypt.compare.mockResolvedValue(false);
 
     await expect(authService.login('test@example.com', 'wrongpassword'))
       .rejects.toThrow('Invalid credentials');
