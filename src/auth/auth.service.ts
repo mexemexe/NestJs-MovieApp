@@ -1,65 +1,34 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { RegisterDTO } from './dto/register.dto';
-import { User } from './user/user.schema';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
-import { UserResponseDTO } from './dto/user-response.dto';
 
 @Injectable()
 export class AuthService {
-  constructor(
-    private readonly jwtService: JwtService,
-    @InjectModel(User.name) private userModel: Model<User>,
-  ) {}
+  constructor(private jwtService: JwtService) {}
 
-  async validateUser(username: string, password: string): Promise<any> {
-    const user = await this.userModel.findOne({ username }).lean(true);
-
-    if (user) {
-      const isMatch = await bcrypt.compare(password, user.passwordHash);
-      if (isMatch) {
-        delete user.passwordHash;
-        return user;
-      }
-      return null;
+  async login(email: string, password: string) {
+    // Mock user validation 
+    if (!email || !password) {
+      throw new Error('Email and password are required');
     }
-    return null;
-  }
 
-  async login(user: any) {
-    const payload = { userId: user._id, username: user.username };
-    return {
-      access_token: this.jwtService.sign(payload),
+    // Simulate user lookup and password check
+    const user = {
+      id: '1',
+      email: 'test@example.com',
+      password: await bcrypt.hash('password123', 10)
     };
-  }
-  async register(registerDto: RegisterDTO): Promise<UserResponseDTO> {
-    const { username, email, password, firstName, lastName } = registerDto;
 
-    const existingUser = await this.userModel.findOne({
-      $or: [{ username }, { email }],
-    });
-    if (existingUser) {
-      throw new HttpException('User already exists', HttpStatus.UNAUTHORIZED);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    
+    if (!isPasswordValid) {
+      throw new Error('Invalid credentials');
     }
-    const salt = await bcrypt.genSalt();
 
-    const passwordHash = await bcrypt.hash(password, salt);
-
-    const newUser = new this.userModel({
-      firstName,
-      lastName,
-      username,
-      email,
-      passwordHash: passwordHash,
-    });
-    const user = await newUser.save();
+    // Generate JWT token
+    const payload = { sub: user.id, email: user.email };
     return {
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      username: user.username,
+      access_token: this.jwtService.sign(payload)
     };
   }
 }
