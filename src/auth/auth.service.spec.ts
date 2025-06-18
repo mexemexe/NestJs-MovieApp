@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
-import { JwtService } from '@nestjs/jwt';
+import { JwtService, JwtModule } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
@@ -11,23 +11,21 @@ vi.mock('bcrypt', () => ({
 
 describe('AuthService', () => {
   let authService: AuthService;
-  let mockJwtService: JwtService;
+  let jwtService: JwtService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AuthService,
-        {
-          provide: JwtService,
-          useValue: {
-            sign: vi.fn().mockReturnValue('test_token')
-          }
-        }
+      imports: [
+        JwtModule.register({
+          secret: 'test_secret',
+          signOptions: { expiresIn: '1h' }
+        })
       ],
+      providers: [AuthService],
     }).compile();
 
     authService = module.get<AuthService>(AuthService);
-    mockJwtService = module.get<JwtService>(JwtService);
+    jwtService = module.get<JwtService>(JwtService);
     
     // Reset mocks before each test
     vi.mocked(bcrypt.compare).mockClear();
@@ -40,8 +38,8 @@ describe('AuthService', () => {
 
     const result = await authService.login('test@example.com', 'password123');
 
-    expect(result).toHaveProperty('access_token', 'test_token');
-    expect(mockJwtService.sign).toHaveBeenCalled();
+    expect(result).toHaveProperty('access_token');
+    expect(jwtService.sign).toHaveBeenCalled();
   });
 
   it('should throw error for missing email or password', async () => {
