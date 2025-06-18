@@ -1,22 +1,12 @@
 import { Test } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
+import * as bcryptModule from 'bcrypt';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-
-const mockJwtService = {
-  sign: vi.fn().mockReturnValue('test_token')
-};
-
-const mockBcrypt = {
-  compare: vi.fn(),
-  hash: vi.fn()
-};
-
-vi.mock('bcrypt', () => mockBcrypt);
 
 describe('AuthService', () => {
   let authService: AuthService;
+  let jwtService: JwtService;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -24,22 +14,26 @@ describe('AuthService', () => {
         AuthService,
         { 
           provide: JwtService, 
-          useValue: mockJwtService 
+          useValue: {
+            sign: vi.fn().mockReturnValue('test_token')
+          }
         }
       ],
     }).compile();
 
     authService = module.get(AuthService);
+    jwtService = module.get(JwtService);
 
-    mockBcrypt.compare.mockResolvedValue(true);
-    mockBcrypt.hash.mockResolvedValue('hashed_password');
+    // Mock bcrypt methods
+    vi.spyOn(bcryptModule, 'compare').mockResolvedValue(true as never);
+    vi.spyOn(bcryptModule, 'hash').mockResolvedValue('hashed_password' as never);
   });
 
   it('should login successfully with correct credentials', async () => {
     const result = await authService.login('test@example.com', 'password123');
 
     expect(result).toEqual({ access_token: 'test_token' });
-    expect(mockJwtService.sign).toHaveBeenCalledOnce();
+    expect(jwtService.sign).toHaveBeenCalledOnce();
   });
 
   it('should throw error for missing email or password', async () => {
@@ -47,9 +41,13 @@ describe('AuthService', () => {
   });
 
   it('should throw error for invalid credentials', async () => {
-    mockBcrypt.compare.mockResolvedValue(false);
+    vi.spyOn(bcryptModule, 'compare').mockResolvedValue(false as never);
 
     await expect(authService.login('test@example.com', 'wrongpassword'))
       .rejects.toThrow('Invalid credentials');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 });
